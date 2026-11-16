@@ -1570,13 +1570,26 @@ void add_hwgenerator_randomness(const char *buffer, size_t count,
 {
 	struct entropy_store *poolp = &input_pool;
 
+	/*
+	 * This tree has no input -> nonblocking push: the nonblocking pool
+	 * only gets credit directly (as add_interrupt_randomness() does until
+	 * it is initialized) or when someone reads it. getrandom() waits on
+	 * nonblocking_pool.initialized without reading, so feed it directly
+	 * until then.
+	 */
+	if (unlikely(!nonblocking_pool.initialized)) {
+		mix_pool_bytes(&nonblocking_pool, buffer, count, NULL);
+		credit_entropy_bits(&nonblocking_pool, entropy);
+		return;
+	}
+
 	/* Suspend writing if we're above the trickle threshold.
 	 * We'll be woken up again once below random_write_wakeup_thresh,
 	 * or when the calling thread is about to terminate.
 	 */
 	wait_event_interruptible(random_write_wait, kthread_should_stop() ||
 			poolp->entropy_count <= random_write_wakeup_thresh);
-	mix_pool_bytes(poolp, buffer, count);
+	mix_pool_bytes(poolp, buffer, count, NULL);
 	credit_entropy_bits(poolp, entropy);
 }
 EXPORT_SYMBOL_GPL(add_hwgenerator_randomness);
