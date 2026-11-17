@@ -170,14 +170,14 @@ static int msm_rng_drbg_read(struct hwrng *rng,
 	base = msm_rng_dev->base;
 
 
-	down(&msm_rng_dev->drbg_sem);
-
 	/* calculate max size bytes to transfer back to caller */
 	maxsize = min_t(size_t, MAX_HW_FIFO_SIZE, max);
 
 	/* no room for word data */
 	if (maxsize < 4)
 		return 0;
+
+	down(&msm_rng_dev->drbg_sem);
 
 	/* read random data from CTR-AES based DRBG */
 	if (FIPS140_DRBG_ENABLED == msm_rng_dev->fips140_drbg_enabled) {
