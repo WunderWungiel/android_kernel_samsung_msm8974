@@ -479,6 +479,13 @@ static int __devinit msm_rng_probe(struct platform_device *pdev)
 	if (error)
 		goto rollback_clk;
 
+	/*
+	 * hwrng_register() reads from the device right away
+	 * (add_early_randomness), and khwrngd may start reading too, so
+	 * the semaphore has to be ready before registration.
+	 */
+	sema_init(&msm_rng_dev->drbg_sem, 1);
+
 	/* register with hwrng framework */
 	msm_rng.priv = (unsigned long) msm_rng_dev;
 	error = hwrng_register(&msm_rng);
@@ -503,8 +510,6 @@ static int __devinit msm_rng_probe(struct platform_device *pdev)
 		goto unregister_chrdev;
 	}
 	cdev_init(&msm_rng_cdev, &msm_rng_fops);
-
-	sema_init(&msm_rng_dev->drbg_sem, 1);
 
 	_first_msm_drbg_init(msm_rng_dev);
 
