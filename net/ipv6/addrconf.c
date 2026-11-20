@@ -3323,12 +3323,18 @@ static void if6_seq_stop(struct seq_file *seq, void *v)
 static int if6_seq_show(struct seq_file *seq, void *v)
 {
 	struct inet6_ifaddr *ifp = (struct inet6_ifaddr *)v;
-	seq_printf(seq, "%pi6 %02x %02x %02x %03x %8s\n",
+	/*
+	 * Keep the 3.4 format (%02x, low 8 flag bits): vendor blobs such as
+	 * Samsung libsec-ril parse this file with a fixed "%02x %02x %02x %02x
+	 * %15s" fscanf and spin forever on the 3-digit flags field that came
+	 * with the u32 ifa_flags backport.
+	 */
+	seq_printf(seq, "%pi6 %02x %02x %02x %02x %8s\n",
 		   &ifp->addr,
 		   ifp->idev->dev->ifindex,
 		   ifp->prefix_len,
 		   ifp->scope,
-		   ifp->flags,
+		   ifp->flags & 0xff,
 		   ifp->idev->dev->name);
 	return 0;
 }
